@@ -1,0 +1,60 @@
+{% extends "base.html" %} 
+ 
+{% block lab %}РГЗ{% endblock %} 
+ 
+{% block main %} 
+<style>
+    a{
+    color: rgb(144, 0, 247);
+    text-decoration: none;
+    transition: 300ms ;
+    }
+    a:hover{
+    color: rgb(0, 217, 255);
+    text-decoration: underline;
+    background-color: rgb(145, 62, 228);
+    font-weight: bold;
+    transition: 700ms 0.3s;
+    }
+    ul {
+    list-style-type: none; /* Убирает буллиты */
+   }
+</style>
+    <div style="display: flex; justify-content: space-between;">
+        <p style="color: rgb(54, 42, 165); font-size: 25px;">Онлайн-магазин Мебельный мир</p>
+
+    
+        
+        
+        
+        <div style="font-size: 20px;">
+            <span>{{username}}</span>
+            <a href="/login" style="border: 2px solid blue; padding: 5px 10px; border-radius: 5px;">Войти</a>
+            <a href="/register" style="border: 2px solid blue; padding: 5px 10px; border-radius: 5px;">Регистрация</a>
+            <a href="logout" style="border: 2px solid blue; padding: 5px 10px; border-radius: 5px;">Выход</a>
+            
+        </div>
+    </div>
+
+    <div style="text-align: center;">
+    <h2>Welcome, {{ username }}!</h2>
+
+    {% for category in categories %}
+        <h3>{{ category }}</h3>
+        <ul>
+            {% for product in categorized_products[category] %}
+                <li>
+                    <b>{{ product[0] }}</b> -  <b>{{ product[2] }}$</b> {{ product[3] }}
+                    <p>{{ product[4] }}</p>
+                    <form action="/add_to_cart" method="post">
+                        <input type="hidden" name="product_id" value="{{ product[0] }}">
+                        <input type="submit" value="Добавить в корзину">
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endfor %}
+    </div>
+</body>
+    
+{% endblock %}
