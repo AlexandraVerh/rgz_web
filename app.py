@@ -4,7 +4,7 @@ import psycopg2
 from Db import db
 from Db.models import users
 from werkzeug.security import check_password_hash, generate_password_hash
-from flask_login import current_user
+from flask_login import LoginManager, current_user, login_required, logout_user,  login_user
 from flask import url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
@@ -27,7 +27,7 @@ login_manager.login_view = 'login'
 login_manager.init_app(app)
 
 @login_manager.user_loader
-def load_users(user_id):
+def load_user(user_id):
     return users.query.get(int(user_id))
 
 def dbConnect(): 
@@ -44,10 +44,21 @@ def dbClose(cursor,connection):
     cursor.close() 
     connection.close()
 
-@app.route("/") 
-def main(): 
-    visibleUser = session.get('username', 'Anon') 
-    # Прописываем параметры подключения к БД 
+login_manager = LoginManager()
+login_manager.login_view = 'login'
+login_manager.init_app(app)
+
+@login_manager.user_loader
+def load_users(user_id):
+    return users.query.get(int(user_id))
+
+@app.route('/')
+def glavnaya():
+    if current_user.is_authenticated:
+        username = current_user.username
+    else:
+        username = "Аноним"
+
     conn = psycopg2.connect( 
         host="127.0.0.1", 
         database="rgz_web", 
@@ -86,80 +97,67 @@ def main():
             categorized_products[category].append(product)
         else:
             categorized_products[category] = [product]
+    return render_template('index.html', username=username, categorized_products=categorized_products, categories=categories)
 
-    return render_template('index.html', username=visibleUser, categorized_products=categorized_products, categories=categories)
- 
+@app.route("/register", methods=['GET', 'POST'])
+def register():
+    if request.method == "GET":
+        return render_template("register.html")
 
+    username_form = request.form.get("username")
+    password_form = request.form.get("password")
 
-@app.route('/register', methods=['GET', 'POST'])
-def registerPage():
-    error = ''
+    # Проверка пустого имени пользователя
+    if not username_form:
+        error = "Пустое имя!"
+        return render_template("register.html", error=error)
 
-    if request.method == 'GET':
-        return render_template('register.html', error=error)
+    # Проверка длины пароля
+    if len(password_form) < 5:
+        error = "Пароль должен содержать не менее 5 символов!"
+        return render_template("register.html", error=error)
 
-    username = request.form.get('username')
-    password = request.form.get('password')
+    # Проверка наличия пользователя с таким именем
+    existing_user = users.query.filter_by(username=username_form).first()
+    if existing_user:
+        error = "Пользователь с таким именем уже существует!"
+        return render_template("register.html", error=error)
 
-    if not (username and password):
-        error="Пожалуйста, заполните все поля"
-        print(error)
-        return render_template('register.html', error=error)
-
-    hashPassword = generate_password_hash(password)
-
-    conn = dbConnect()
-    cur = conn.cursor()
-    cur.execute(f"SELECT username FROM users WHERE username = '{username}';")
-
-    if cur.fetchone() is not None:#не получаем ббольше одной строки только один пользователь может быть с таким именем
-        error = "Пользователь с данным именем уже существует"
-
-        dbClose(cur, conn)
-        return render_template('register.html', error=error)
-    
-    #сохраняем пароль в вижде хэша в бд
-    cur.execute(f"INSERT INTO users (username, password) VALUES ('{username}','{hashPassword}');")
-    conn.commit()#фиксируем изменения
-    dbClose(cur, conn)
+    # Создание нового пользователя
+    hashed_password = generate_password_hash(password_form, method="pbkdf2")
+    new_user = users(username=username_form, password=hashed_password)
+    db.session.add(new_user)
+    db.session.commit()
 
     return redirect("/login")
 
-@app.route('/login', methods=['GET', 'POST'])
-def loginPage():
-    error = ''
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "GET":
+        return render_template("login.html")
 
-    if request.method == 'GET':
-        return render_template('login.html', error=error)
+    username_form = request.form.get("username")
+    password_form = request.form.get("password")
 
-    username = request.form.get('username')
-    password = request.form.get('password')
-
-    if not (username and password):
-        error="Пожалуйста, заполните все поля"
-        return render_template('login.html', error=error)
-
-    conn = dbConnect()
-    cur = conn.cursor()
-    cur.execute(f"SELECT id, password FROM users WHERE username = '{username}'")
-    result = cur.fetchone()
-
-    if result is None:
-        error="Неправильный логин или пароль"
-        dbClose(cur,conn)  # Закрытие соединения
-        return render_template('login.html', error=error)
-    
-    userID, hashPassword = result
-    if check_password_hash(hashPassword, password):
-        session['id'] = userID
-        session['username'] = username
-        dbClose(cur,conn)  # Закрытие соединения
-        return redirect("/")
-    else:
-        error ="Неправильный логин или пароль"
+    if not username_form or not password_form:
+        error = "Поле имя и/или пароль не заполнено"
         return render_template("login.html", error=error)
-    
+
+    my_user = users.query.filter_by(username=username_form).first()
+
+    if my_user is None:
+        error = "Пользователь не существует"
+        return render_template("login.html", error=error)
+
+    if not check_password_hash(my_user.password, password_form):
+        error = "Неправильный пароль"
+        return render_template("login.html", error=error)
+
+    login_user(my_user, remember=False)
+    return redirect("/")
+
 @app.route("/logout")
+@login_required
 def logout():
-    session.clear()
+    logout_user()
     return redirect("/")
