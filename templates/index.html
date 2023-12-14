@@ -23,7 +23,7 @@
     <div style="display: flex; justify-content: space-between;">
         <p style="color: rgb(54, 42, 165); font-size: 25px;">Онлайн-магазин Мебельный мир</p>
 
-        
+        <a href="/cart">Корзина</a>
         
         
         
@@ -45,7 +45,7 @@
             {% for product in categorized_products[category] %}
                 <li>
                     <p><b>{{ product[0] }}</b> -  <b>{{ product[2] }}$</b> {{ product[3] }}</p>
-                    <p>{{ product[4] }}</p>
+                    
                     <form action="/add_to_cart" method="post">
                         <input type="hidden" name="product_id" value="{{ product[0] }}">
                         <input type="submit" value="Добавить в корзину">

@@ -8,7 +8,7 @@ from flask_login import LoginManager, current_user, login_required, logout_user,
 from flask import url_for
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
-import os
+
 
 app = Flask(__name__)
 app.secret_key = '123'
@@ -51,6 +51,7 @@ login_manager.init_app(app)
 @login_manager.user_loader
 def load_users(user_id):
     return users.query.get(int(user_id))
+
 
 @app.route('/')
 def glavnaya():
@@ -161,3 +162,43 @@ def login():
 def logout():
     logout_user()
     return redirect("/")
+
+@app.route("/add_to_cart", methods=["POST"])
+@login_required
+def addToCart():
+    product_ids = request.form.getlist("product_id")  # Получаем список идентификаторов товаров из формы
+    if "cart" not in session:
+        session["cart"] = []
+    session["cart"].extend(product_ids)  # Добавляем все идентификаторы в корзину
+    return redirect("/")
+
+@app.route("/cart")
+@login_required
+def viewCart():
+    cart_items = session.get("cart", [])
+    products = []
+    if cart_items:
+        conn = dbConnect()
+        cur = conn.cursor()
+        # Получить информацию о товарах в корзине из базы данных
+        for cart_item in cart_items:
+            cur.execute("SELECT name, price FROM furniture WHERE name = %s;", (cart_item,))
+            result = cur.fetchone()
+            if result:
+                name, price = result
+                products.append({
+                    "name": name,
+                    "price": price
+                })
+        dbClose(cur, conn)
+    return render_template("cart.html", products=products)
+
+@app.route("/remove_from_cart", methods=["POST"])
+@login_required
+def removeFromCart():
+    name = request.form.get("name")
+    cart_items = session.get("cart", [])
+    if name in cart_items:
+        cart_items.remove(name)
+    return redirect("/cart")
+
