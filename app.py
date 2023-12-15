@@ -1,6 +1,7 @@
 from flask import Flask
-from flask import redirect, Blueprint, render_template, request, session
+from flask import redirect, Blueprint, render_template, request, session,  abort
 import psycopg2
+from psycopg2 import extras
 from Db import db
 from Db.models import users
 from werkzeug.security import check_password_hash, generate_password_hash
@@ -12,10 +13,10 @@ from flask_login import LoginManager
 
 app = Flask(__name__)
 app.secret_key = '123'
-user_db = 'aleksandra_rgz_web_orm'
+user_db = 'aleksandra_rgz_web'
 host_ip = '127.0.0.1'
 host_port = '5432'
-database_name = 'rgz_web_orm'
+database_name = 'rgz_web'
 password = '1235'
 
 app.config['SQLALCHEMY_DATABASE_URI'] = f'postgresql://{user_db}:{password}@{host_ip}:{host_port}/{database_name}'
@@ -60,45 +61,14 @@ def glavnaya():
     else:
         username = "Аноним"
 
-    conn = psycopg2.connect( 
-        host="127.0.0.1", 
-        database="rgz_web", 
-        user="aleksandra_rgz_web", 
-        password="1235", 
-        port = 5432
-    ) 
-    # Получаем курсор. С помощью него мы можем выполнять SQL-запросы 
-    cur = conn.cursor() 
-    # Пишем запрос, который курсор должен выполнить 
-    cur.execute("SELECT * FROM users;") 
-    # fetchall - получить все строки, которые получились в результате выполнения SQL-запроса в execute 
-    # Сохраняем эти строки в переменную result 
-    result = cur.fetchall() 
+    conn = dbConnect()
+    cur = conn.cursor(cursor_factory=extras.DictCursor)
     
-    # Открытие файла изображения и чтение его в формате BYTEA
-    
-
-    cur = conn.cursor()
-    cur.execute("SELECT name, category, price, description FROM furniture ORDER BY category;")
+    # Получить все товары
+    cur.execute("SELECT * FROM Furniture")
     products = cur.fetchall()
 
-    cur.close() 
-    conn.close() 
-
-    print(result) 
-
-    categories = set([product[1] for product in products])  # Получаем уникальные категории товаров
-
-    categorized_products = {}  # Создаем словарь, где ключи - это категории, значения - списки товаров в каждой категории
-
-    # Группируем товары по категориям
-    for product in products:
-        category = product[1]
-        if category in categorized_products:
-            categorized_products[category].append(product)
-        else:
-            categorized_products[category] = [product]
-    return render_template('index.html', username=username, categorized_products=categorized_products, categories=categories)
+    return render_template('index.html', username=username, products=products)
 
 @app.route("/register", methods=['GET', 'POST'])
 def register():
@@ -163,42 +133,43 @@ def logout():
     logout_user()
     return redirect("/")
 
-@app.route("/add_to_cart", methods=["POST"])
+@app.route('/add_to_cart', methods=["POST"])
 @login_required
-def addToCart():
-    product_ids = request.form.getlist("product_id")  # Получаем список идентификаторов товаров из формы
-    if "cart" not in session:
-        session["cart"] = []
-    session["cart"].extend(product_ids)  # Добавляем все идентификаторы в корзину
-    return redirect("/")
+def add_to_cart():
+     
+    product_ids = request.form.getlist("product_id")  # Get a list of product IDs
+    kolvo = request.form.getlist("kolvo")     # Get a list of kolvo
 
-@app.route("/cart")
-@login_required
-def viewCart():
-    cart_items = session.get("cart", [])
-    products = []
-    if cart_items:
-        conn = dbConnect()
-        cur = conn.cursor()
-        # Получить информацию о товарах в корзине из базы данных
-        for cart_item in cart_items:
-            cur.execute("SELECT name, price FROM furniture WHERE name = %s;", (cart_item,))
-            result = cur.fetchone()
-            if result:
-                name, price = result
-                products.append({
-                    "name": name,
-                    "price": price
-                })
-        dbClose(cur, conn)
-    return render_template("cart.html", products=products)
+    if not product_ids or not kolvo:
+        abort(400)
 
-@app.route("/remove_from_cart", methods=["POST"])
+    # Add the products and kolvo to the cart
+    # cart_items = []
+    # for product_id, kolvo in zip(product_ids, kolvo):
+    #     cart_items.append({"product_id": product_id, "kolvo": kolvo})
+
+    # return render_template("korzina.html", cart_items=cart_items)
+    conn = dbConnect()
+    cur = conn.cursor(cursor_factory=extras.DictCursor)
+
+    cart_items = []
+    for product_id, kolvo in zip(product_ids, kolvo):
+        cur.execute("SELECT name, price FROM Furniture WHERE id = %s", (product_id,))
+        product = cur.fetchone()
+        if product:
+            cart_items.append({"name": product["name"], "price": product["price"], "kolvo": kolvo})
+
+    conn.close()
+    cur.close()
+    session["cart_items"] = cart_items
+
+    return render_template("cart.html", cart_items=cart_items)
+
+@app.route('/korzina')
 @login_required
-def removeFromCart():
-    name = request.form.get("name")
-    cart_items = session.get("cart", [])
-    if name in cart_items:
-        cart_items.remove(name)
-    return redirect("/cart")
+def cart():
+    
+    cart_items = session.get("cart_items", [])
+
+    return render_template("cart.html", cart_items=cart_items)
 

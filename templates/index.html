@@ -23,7 +23,7 @@
     <div style="display: flex; justify-content: space-between;">
         <p style="color: rgb(54, 42, 165); font-size: 25px;">Онлайн-магазин Мебельный мир</p>
 
-        <a href="/cart">Корзина</a>
+        <a href="/korzina">Корзина</a>
         
         
         
@@ -39,21 +39,21 @@
     <div style="text-align: center;">
     <h2>Welcome, {{ username }}!</h2>
 
-    {% for category in categories %}
-       <p><h3>{{ category }}</h3></p> 
-        <ul>
-            {% for product in categorized_products[category] %}
-                <li>
-                    <p><b>{{ product[0] }}</b> -  <b>{{ product[2] }}$</b> {{ product[3] }}</p>
-                    
-                    <form action="/add_to_cart" method="post">
-                        <input type="hidden" name="product_id" value="{{ product[0] }}">
-                        <input type="submit" value="Добавить в корзину">
-                    </form>
-                </li>
-            {% endfor %}
         </ul>
-    {% endfor %}
+            
+        {% for product in products %}
+        <div class="product">
+            <h3>{{ product.name }}</h3>
+            <p>{{ product.description }}</p>
+            <p>Цена: {{ product.price }} $</p>
+            
+                <form action="/add_to_cart" method="POST">
+                    <input type="hidden" name="product_id" value="{{ product.id }}">
+                    <input type="number" name="kolvo" value="1" min="1">
+                    <button type="submit">Добавить в корзину</button>
+                </form>
+        </div>
+        {% endfor %}
     </div>
 </body>
     

@@ -17,23 +17,19 @@
 </style>
 </head>
 <body>
-    <h1>Корзина</h1>
-    {% if products %}
-    <ul>
-        {% for product in products %}
-            <li>
-                <b>{{ product['name'] }}</b> - <b>{{ product['price'] }}$</b>
-                <form action="/remove_from_cart" method="post">
-                    <input type="hidden" name="product_id" value="{{ product['name'] }}">
-                    <input type="submit" value="Удалить">
-                </form>
-            </li>
-        {% endfor %}
-    </ul>
-    
+    <h1>Ваша корзина</h1>
+<p><a href="/">Главная страница</a></p>
+    {% if cart_items %}
+        <ul>
+            {% for item in cart_items %}
+                <li>{{ item.name }} - Цена: {{ item.price }} - Количество: {{ item.kolvo }}</li>
+            {% endfor %}
+        </ul>
+        <a href="/checkout">Оформить заказ</a>  <!-- Ссылка на страницу оформления заказа -->
     {% else %}
-        <p>Ваша корзина пуста</p>
+        <p>Ваша корзина пуста.</p>
     {% endif %}
-<a href="/" >Главная страница</a>
+
+
 </body>
 {% endblock %}
