@@ -133,6 +133,19 @@ def logout():
     logout_user()
     return redirect("/")
 
+@app.route("/delete_account", methods=["GET", "POST"])
+@login_required
+def delete_account():
+    user_id = current_user.id
+
+    # Удаление пользователя из базы данных
+    user = users.query.get(user_id)
+    db.session.delete(user)
+    db.session.commit()
+
+    logout_user()
+    return redirect("/")
+
 @app.route('/add_to_cart', methods=["POST"])
 @login_required
 def add_to_cart():
