@@ -1,0 +1,27 @@
+{% extends 'base.html' %}
+
+{% block lab %}РГЗ{% endblock %}
+
+{% block main %}
+    
+<a href="/">Главная страница</a>
+        
+    <div>
+        <h2>Итоговая сумма: {{ cart_total }} $</h2>
+        <form action="/oplata" method="post">
+            <label style="font-size: x-large;" for="card_num">Номер карты:</label><br>
+            <input type="text" id="card_num" name="card_num" required pattern="[0-9]{16}" title="Номер карты должен содержать 16 цифр">
+            <br>
+            <div style="font-size: x-large;">Имя держателя карты:</div>
+            <label>
+            <input type="text" name="name">
+            </label>
+            <br>
+            
+            <label style="font-size: x-large;" for="cvv">CVV:</label><br>
+            <input type="text" id="cvv" name="cvv" required pattern="[0-9]{3}" title="CVV должен содержать 3 цифры">
+            <br>
+            <button type="submit">Оплатить</button>
+        </form>
+    </div>
+{% endblock %}

@@ -1,5 +1,5 @@
 from flask import Flask
-from flask import redirect, Blueprint, render_template, request, session,  abort
+from flask import redirect, Blueprint, render_template, request, session,  abort, jsonify
 import psycopg2
 from psycopg2 import extras
 from Db import db
@@ -136,40 +136,94 @@ def logout():
 @app.route('/add_to_cart', methods=["POST"])
 @login_required
 def add_to_cart():
-     
     product_ids = request.form.getlist("product_id")  # Get a list of product IDs
-    kolvo = request.form.getlist("kolvo")     # Get a list of kolvo
+    kolvo = request.form.getlist("kolvo")  # Get a list of kolvo
 
     if not product_ids or not kolvo:
         abort(400)
 
-    # Add the products and kolvo to the cart
-    # cart_items = []
-    # for product_id, kolvo in zip(product_ids, kolvo):
-    #     cart_items.append({"product_id": product_id, "kolvo": kolvo})
-
-    # return render_template("korzina.html", cart_items=cart_items)
     conn = dbConnect()
     cur = conn.cursor(cursor_factory=extras.DictCursor)
 
-    cart_items = []
-    for product_id, kolvo in zip(product_ids, kolvo):
+    cart_items = session.get("cart_items", [])  # Get current cart items
+    cart_total = session.get("cart_total", 0)  # Get current cart total
+
+    for product_id, qty in zip(product_ids, kolvo):
         cur.execute("SELECT name, price FROM Furniture WHERE id = %s", (product_id,))
         product = cur.fetchone()
         if product:
-            cart_items.append({"name": product["name"], "price": product["price"], "kolvo": kolvo})
+            cart_item = {"name": product["name"], "price": product["price"], "qty": qty}
+            cart_items.append(cart_item)
+            cart_total += int(product["price"]) * int(qty)  # Update the cart total
 
     conn.close()
     cur.close()
-    session["cart_items"] = cart_items
+    session["cart_items"] = cart_items  # Store the updated cart items
+    session["cart_total"] = cart_total  # Store the updated cart total
 
-    return render_template("cart.html", cart_items=cart_items)
+    return render_template("cart.html", cart_items=cart_items, cart_total=cart_total)
+
+@app.route('/remove_from_cart', methods=["POST"])
+@login_required
+def remove_from_cart():
+    product_name = request.form.get("product_name")
+    product_price = request.form.get("product_price")
+    product_qty = request.form.get("product_qty")
+
+    if not (product_name and product_price and product_qty):
+        abort(400)
+    
+    cart_items = session.get("cart_items", [])
+    updated_cart_items = []
+    cart_total = session.get("cart_total", 0)  # Get current cart total
+    cart_total = 0  # Initialize cart total
+
+    for item in cart_items:
+        if item["name"] != product_name or item["price"] != product_price or item["qty"] != product_qty:
+            updated_cart_items.append(item)
+            price = item["price"].replace(",", ".")  # Replace comma with dot as decimal separator
+            cart_total += float(price) * int(item["qty"])  # Calculate total for each remaining item
+
+    session["cart_items"] = updated_cart_items
+    session["cart_total"] = cart_total  # Update the total in the session
+
+    return redirect("/korzina")
 
 @app.route('/korzina')
 @login_required
 def cart():
     
     cart_items = session.get("cart_items", [])
+    cart_total = session.get("cart_total", 0)
 
-    return render_template("cart.html", cart_items=cart_items)
+    return render_template("cart.html", cart_items=cart_items, cart_total=cart_total)
 
+@app.route('/oplata', methods=["GET", "POST"])
+@login_required
+def oplata():
+
+    if request.method == "POST":
+        # Получить данные карты из формы
+        card_num = request.form.get("card_num")
+        cvv = request.form.get("cvv")
+
+        # Проверить данные карты
+        if len(card_num) != 16:
+            print('Неверный номер карты. Пожалуйста, введите 16-значный номер карты. ')
+            return redirect('/oplata')
+        
+        if len(cvv) != 3:
+            print('Неверный CVV. Пожалуйста, введите 3-значный CVV код. ')
+            return redirect('/oplata')
+
+        # Очистка корзины после оплаты
+        session.pop("cart_items", None)
+        session.pop("cart_total", None)
+
+        return render_template('success.html')
+    
+    # Вывести информацию о корзине и форму оплаты
+    cart_items = session.get("cart_items", [])
+    cart_total = session.get("cart_total", 0)
+
+    return render_template("oplata.html", cart_items=cart_items, cart_total=cart_total)

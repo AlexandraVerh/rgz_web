@@ -4,13 +4,7 @@
 
 {% block main %}
 <style>
-    ul {
-        list-style-type: none;
-        padding: 0;
-    }
-    li {
-        margin-bottom: 10px;
-    }
+
     form {
         display: inline;
     }
@@ -19,17 +13,39 @@
 <body>
     <h1>Ваша корзина</h1>
 <p><a href="/">Главная страница</a></p>
-    {% if cart_items %}
-        <ul>
+{% if cart_items %}
+<table>
+    <thead>
+        <tr>
+            <th>Название</th>
+            <th>Стоимость</th>
+            <th>Количество</th>
+            <th>Удалить</th>
+        </tr>
+    </thead>
+        <tbody>
             {% for item in cart_items %}
-                <li>{{ item.name }} - Цена: {{ item.price }} - Количество: {{ item.kolvo }}</li>
+            <tr>
+                <td>{{ item.name }}</td>
+                <td>{{ item.price }} $</td>
+                <td>{{ item.qty }}</td>
+                <td>
+                    <form action="/remove_from_cart" method="post">
+                        <input type="hidden" name="product_name" value="{{ item.name }}">
+                        <input type="hidden" name="product_price" value="{{ item.price }}">
+                        <input type="hidden" name="product_qty" value="{{ item.qty }}">
+                        <button type="submit">Удалить</button>
+                    </form>
+                </td>
+            </tr>
+        </table>
             {% endfor %}
-        </ul>
-        <a href="/checkout">Оформить заказ</a>  <!-- Ссылка на страницу оформления заказа -->
+        </tbody>
+        <div><a href="/oplata">Оформить заказ</a></div>
+    
     {% else %}
         <p>Ваша корзина пуста.</p>
     {% endif %}
-
 
 </body>
 {% endblock %}
