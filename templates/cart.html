@@ -23,25 +23,33 @@
             <th>Удалить</th>
         </tr>
     </thead>
-        <tbody>
-            {% for item in cart_items %}
-            <tr>
-                <td>{{ item.name }}</td>
-                <td>{{ item.price }} $</td>
-                <td>{{ item.qty }}</td>
-                <td>
-                    <form action="/remove_from_cart" method="post">
-                        <input type="hidden" name="product_name" value="{{ item.name }}">
-                        <input type="hidden" name="product_price" value="{{ item.price }}">
-                        <input type="hidden" name="product_qty" value="{{ item.qty }}">
-                        <button type="submit">Удалить</button>
-                    </form>
-                </td>
-            </tr>
-        </table>
-            {% endfor %}
-        </tbody>
-        <div><a href="/oplata">Оформить заказ</a></div>
+    <tbody>
+        {% for item in cart_items %}
+        <tr>
+            <td>{{ item.name }}</td>
+            <td>{{ item.price }} $</td>
+            <td>{{ item.qty }}</td>
+            <td>
+                <form action="/remove_from_cart" method="post">
+                    <input type="hidden" name="product_name" value="{{ item.name }}">
+                    <input type="hidden" name="product_price" value="{{ item.price }}">
+                    <input type="hidden" name="product_qty" value="{{ item.qty }}">
+                    <button type="submit">Удалить</button>
+                </form>
+            </td>
+        </tr>
+        {% endfor %}
+    </tbody>
+    
+    <!-- Добавлено общее количество товаров и итоговая стоимость -->
+    <tfoot>
+        <tr>
+            <td colspan="2" class="text-right"><strong>Итоговая стоимость:</strong></td>
+            <td colspan="2">{{ cart_total }} $</td>
+        </tr>
+    </tfoot>
+</table>
+    <div><a href="/oplata">Оформить заказ</a></div>
     
     {% else %}
         <p>Ваша корзина пуста.</p>
